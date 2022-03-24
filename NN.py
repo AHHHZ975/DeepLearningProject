@@ -610,7 +610,6 @@ class Pixel2Point_InitialPC(Module):
 		# print(decoded.shape)
 		return decoded
 
-
 class CAE_AHZ_Attention(Module):
 	def __init__(self):
 		super(CAE_AHZ_Attention, self).__init__()
@@ -696,3 +695,74 @@ class CAE_AHZ_Attention(Module):
 		x = torch.tanh(x)
 
 		return x
+
+
+class PureAttention(Module):
+	
+	def __init__(self):
+		super(PureAttention, self).__init__()
+		# TODO: Initialize myModel
+		
+		self.sequence_length = 256
+		self.input_size = 256
+		self.embed_size = 256		
+		self.positional_encoding = torch.nn.Parameter(torch.rand(self.embed_size, self.embed_size))
+
+		self.attention1 = MultiheadAttention(256, 32)
+		self.attention2 = MultiheadAttention(128, 32)
+		self.attention3 = MultiheadAttention(64, 16)
+		self.attention4 = MultiheadAttention(32, 8)
+		self.attention5 = MultiheadAttention(16, 4)
+		
+		self.linear1 = Linear(3072, 2500)
+		self.linear2 = Linear(2500, 1700)
+		self.linear3 = Linear(1700, cfg.SAMPLE_SIZE*3)
+
+		self.maxpool = MaxPool2d(kernel_size=2, stride=2)
+
+
+
+	def forward(self, x):
+		batch_size, channels, sequence_length, input_size = x.shape
+        
+		# Positional encoding
+		x = x.reshape(batch_size*channels, sequence_length, -1)
+		for i in range(batch_size*channels):
+			x[i] = torch.add(x[i], self.positional_encoding)
+		x = torch.unsqueeze(x, dim=0)
+		x = x.reshape(batch_size, channels, sequence_length, input_size)
+
+		# Attention layer 1
+		batch_size, channels, sequence_length, input_size = x.shape
+		x = x.reshape(batch_size*channels, sequence_length, input_size)		
+		attn_output, attn_output_weights = self.attention1(x, x, x)
+		x = torch.relu(attn_output)
+		x = self.maxpool(x)
+
+		# Attention layer 2
+		batch_size_channels, sequence_length, input_size = x.shape
+		x = x.reshape(batch_size_channels, sequence_length, input_size)		
+		attn_output, attn_output_weights = self.attention2(x, x, x)
+		x = torch.relu(attn_output)
+		x = self.maxpool(x)
+
+		# Attention layer 3
+		batch_size_channels, sequence_length, input_size = x.shape
+		x = x.reshape(batch_size_channels, sequence_length, input_size)		
+		attn_output, attn_output_weights = self.attention3(x, x, x)
+		x = torch.relu(attn_output)
+		x = self.maxpool(x)
+
+		# Linear 1-2
+		batch_size_channels, sequence_length, input_size = x.shape
+		x = torch.unsqueeze(x, dim=0)
+		x = x.reshape(int(batch_size_channels/3), 3, sequence_length, input_size)
+		batch_size, channels, height, width = x.shape
+		x = x.reshape(-1, channels*height*width)
+		x = torch.relu(self.linear1(x))
+		x = torch.relu(self.linear2(x))
+		x = self.linear3(x)
+		x = torch.tanh(x)
+
+		return x
+
