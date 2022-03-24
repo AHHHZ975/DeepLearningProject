@@ -1,6 +1,7 @@
 from torch.nn import Sequential
 from torch.nn import Module         # Rather than using the Sequential PyTorch class to implement LeNet, we’ll instead subclass the Module object so you can see how PyTorch implements neural networks using classes
 from torch.nn import Conv2d         # PyTorch’s implementation of convolutional layers
+from torch.nn import MultiheadAttention        # PyTorch’s implementation of convolutional layers
 from torch.nn import Linear         # Fully connected layers
 from torch.nn import MaxPool2d      # Applies 2D max-pooling to reduce the spatial dimensions of the input volume
 from torch.nn import ReLU           # ReLU activation function
@@ -608,3 +609,90 @@ class Pixel2Point_InitialPC(Module):
 		decoded = self.decoder(encoded)
 		# print(decoded.shape)
 		return decoded
+
+
+class CAE_AHZ_Attention(Module):
+	def __init__(self):
+		super(CAE_AHZ_Attention, self).__init__()
+		# TODO: Initialize myModel
+		
+		self.sequence_length = 256
+		self.input_size = 256
+		self.embed_size = 128
+		self.positional_encoding = torch.nn.Parameter(torch.rand(self.embed_size*2, self.embed_size*2))
+
+		self.conv1 = Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1) # 8 * 4 * 4
+		self.conv2 = Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1) # 4 * 2 * 2
+		self.conv3 = Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1) # 4 * 2 * 2
+		self.conv4 = Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1) # 4 * 2 * 2
+		self.conv5 = Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1) # 4 * 2 * 2
+
+		self.attention1 = MultiheadAttention(128, 32)
+
+		self.deconv1 = ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=1) # 8 * 5 * 5
+		self.deconv2 = ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=1) # 8 * 5 * 5
+		self.deconv3 = ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1) # 4 * 15 * 15
+		self.deconv4 = ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1) # 4 * 15 * 15
+		
+		self.linear1 = Linear(32*18*18, 2700)
+		self.linear2 = Linear(2700, cfg.SAMPLE_SIZE*3)
+
+		self.maxpool = MaxPool2d(kernel_size=2, stride=2)
+
+
+
+	def forward(self, x):
+		batch_size, channels, sequence_length, input_size = x.shape
+        
+		# Positional encoding
+		x = x.reshape(batch_size*channels, sequence_length, -1)
+		for i in range(batch_size*channels):
+			x[i] = torch.add(x[i], self.positional_encoding)
+		x = torch.unsqueeze(x, dim=0)
+		x = x.reshape(batch_size, channels, sequence_length, input_size)
+		batch_size, channels, sequence_length, input_size = x.shape
+
+
+		# Conv 1
+		x = torch.relu(self.conv1(x))
+		x = self.maxpool(x)
+		batch_size, channels, sequence_length, input_size = x.shape
+
+		# Attn 1
+		x = x.reshape(batch_size*channels, sequence_length, input_size)		
+		attn_output, attn_output_weights = self.attention1(x, x, x)
+		x = torch.relu(attn_output)
+
+		# Conv 2		
+		x = torch.unsqueeze(x, dim=0)
+		x = x.reshape(batch_size, channels, sequence_length, input_size)
+		x = torch.relu(self.conv2(x))
+		x = self.maxpool(x)
+
+		# Conv3
+		x = torch.relu(self.conv3(x))
+		x = self.maxpool(x)
+
+		# Conv4
+		x = torch.relu(self.conv4(x))
+		x = self.maxpool(x)
+
+
+		# # Conv 5
+		# x = torch.relu(self.conv5(x))
+
+		# Deconv 1-4
+		# x = torch.relu(self.deconv1(x))
+		x = torch.relu(self.deconv2(x))
+		x = torch.relu(self.deconv3(x))
+		# x = torch.relu(self.deconv4(x))
+
+
+		# Linear 1-2
+		batch_size, channels, height, width = x.shape
+		x = x.reshape(-1, channels*height*width)
+		x = torch.relu(self.linear1(x))
+		x = self.linear2(x)
+		x = torch.tanh(x)
+
+		return x
