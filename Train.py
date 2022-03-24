@@ -6,7 +6,7 @@ from torch.nn.modules import loss                                   # import mat
 # matplotlib.use("Agg")
 
 # import the necessary packages
-from NN import AE, CAE_AHZ, PSGN, CAE_new, PSGN_Vanilla, Pixel2Point, Pixel2Point_InitialPC                                   # My PyTorch implementation of the simple autoencoder
+from NN import AE, CAE_AHZ, PSGN, CAE_AHZ_Attention, CAE_new, PSGN_Vanilla, Pixel2Point, Pixel2Point_InitialPC                                   # My PyTorch implementation of the simple autoencoder
 from NN import CVAE                                  # My PyTorch implementation of the convolutional autoencoder
 from torch.autograd import Variable
 from torch.utils.data import random_split           # Constructs a random training/testing split from an input set of data
@@ -222,7 +222,7 @@ def trainAE():
 def trainCAE():
     # Initialize the model
     print("[INFO] initializing the CAE model...")
-    model = ().to(device=device)
+    model = CAE_AHZ_Attention().to(device=device)
 
     # Initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=cfg.INIT_LR, weight_decay=1e-5)
