@@ -21,11 +21,10 @@ import time
 import Dataset
 from Tools import Tool3D
 import sys
-sys.path.append('/home/ahz/Desktop/3D-Reconstruction/3D-Reconstruction')
+sys.path.append('C:/Users/AmirHossein/OneDrive/Desktop/DeepLearningProject/DeepLearningProject')
 import Config as cfg
 from neuralnet_pytorch.metrics import chamfer_loss
 from Utils import Utils
-from Engine import VAELoss
 # from swd import SinkhornDistance
 
 def trainInitialization():
@@ -223,7 +222,7 @@ def trainAE():
 def trainCAE():
     # Initialize the model
     print("[INFO] initializing the CAE model...")
-    model = Pixel2Point_InitialPC().to(device=device)
+    model = ().to(device=device)
 
     # Initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=cfg.INIT_LR, weight_decay=1e-5)

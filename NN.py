@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn.modules.conv import ConvTranspose2d
 from torch.nn.modules.flatten import Flatten
-sys.path.append('/home/ahz/Desktop/3D-Reconstruction/3D-Reconstruction')
+sys.path.append('C:/Users/AmirHossein/OneDrive/Desktop/DeepLearningProject/DeepLearningProject')
 import Config as cfg
 
 

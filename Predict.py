@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader     # Used to load my ShapeNet testing d
 import torch
 import Dataset
 import sys
-sys.path.append('/home/ahz/Desktop/3D-Reconstruction/3D-Reconstruction')
+sys.path.append('C:/Users/AmirHossein/OneDrive/Desktop/DeepLearningProject/DeepLearningProject')
 import Config as cfg
 from torch.autograd import Variable
 from Tools import Tool3D

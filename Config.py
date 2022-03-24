@@ -1,5 +1,5 @@
 # Directories
-ROOT_DIR = '/home/ahz/Desktop/3D-Reconstruction/3D-Reconstruction'
+ROOT_DIR = 'C:/Users/AmirHossein/OneDrive/Desktop/DeepLearningProject/DeepLearningProject'
 DATA_DIR = ROOT_DIR + '/Data'
 SHAPENET_DIR = DATA_DIR + '/ShapeNet'
 
