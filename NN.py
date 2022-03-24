@@ -3,8 +3,11 @@ from torch.nn import Module         # Rather than using the Sequential PyTorch c
 from torch.nn import Conv2d         # PyTorch’s implementation of convolutional layers
 from torch.nn import MultiheadAttention        # PyTorch’s implementation of convolutional layers
 from torch.nn import Linear         # Fully connected layers
+from torch.nn import LayerNorm
+from torch.nn import Dropout
 from torch.nn import MaxPool2d      # Applies 2D max-pooling to reduce the spatial dimensions of the input volume
 from torch.nn import ReLU           # ReLU activation function
+from torch.nn import GELU
 from torch.nn import Tanh
 import sys
 import numpy as np
@@ -714,9 +717,15 @@ class PureAttention(Module):
 		self.attention4 = MultiheadAttention(32, 8)
 		self.attention5 = MultiheadAttention(16, 4)
 		
-		self.linear1 = Linear(3072, 2500)
-		self.linear2 = Linear(2500, 1700)
-		self.linear3 = Linear(1700, cfg.SAMPLE_SIZE*3)
+		self.linear1 = Linear(3*8*8, 3*12*12)
+		self.linear2 = Linear(3*12*12, 768)
+		self.linear3 = Linear(768, cfg.SAMPLE_SIZE*3)
+		self.linear4 = Linear(cfg.SAMPLE_SIZE*3, cfg.SAMPLE_SIZE*3)
+
+		self.deconv1 = ConvTranspose2d(in_channels=3, out_channels=3, kernel_size=3, stride=1) # 8 * 5 * 5
+		self.deconv2 = ConvTranspose2d(in_channels=3, out_channels=3, kernel_size=3, stride=1) # 8 * 5 * 5
+		self.deconv3 = ConvTranspose2d(in_channels=3, out_channels=3, kernel_size=3, stride=1) # 4 * 15 * 15
+
 
 		self.maxpool = MaxPool2d(kernel_size=2, stride=2)
 
@@ -753,16 +762,76 @@ class PureAttention(Module):
 		x = torch.relu(attn_output)
 		x = self.maxpool(x)
 
-		# Linear 1-2
+		# Attention layer 4
+		batch_size_channels, sequence_length, input_size = x.shape
+		x = x.reshape(batch_size_channels, sequence_length, input_size)		
+		attn_output, attn_output_weights = self.attention4(x, x, x)
+		x = torch.relu(attn_output)
+		x = self.maxpool(x)
+
+
+		# Attention layer 5
+		batch_size_channels, sequence_length, input_size = x.shape
+		x = x.reshape(batch_size_channels, sequence_length, input_size)		
+		attn_output, attn_output_weights = self.attention5(x, x, x)
+		x = torch.relu(attn_output)
+		x = self.maxpool(x)
+
+
+
+		# Deconv 1-2
 		batch_size_channels, sequence_length, input_size = x.shape
 		x = torch.unsqueeze(x, dim=0)
 		x = x.reshape(int(batch_size_channels/3), 3, sequence_length, input_size)
+		# x = self.deconv1(x)
+		# x = self.deconv2(x)
+		# x = self.deconv3(x)
+
+
+		# Linear 1-2
+		# batch_size_channels, sequence_length, input_size = x.shape
+		# x = torch.unsqueeze(x, dim=0)
+		# x = x.reshape(int(batch_size_channels/3), 3, sequence_length, input_size)
 		batch_size, channels, height, width = x.shape
 		x = x.reshape(-1, channels*height*width)
 		x = torch.relu(self.linear1(x))
 		x = torch.relu(self.linear2(x))
-		x = self.linear3(x)
+		x = torch.relu(self.linear3(x))
+		x = self.linear4(x)
 		x = torch.tanh(x)
 
 		return x
+
+
+class PreLayerNormAttention(Module):
+
+    def __init__(self, embed_dim, hidden_dim, num_heads, dropout=0.0):
+        """
+        Inputs:
+            embed_dim - Dimensionality of input and attention feature vectors
+            hidden_dim - Dimensionality of hidden layer in feed-forward network
+                         (usually 2-4x larger than embed_dim)
+            num_heads - Number of heads to use in the Multi-Head Attention block
+            dropout - Amount of dropout to apply in the feed-forward network
+        """
+        super().__init__()
+
+        self.layer_norm_1 = LayerNorm(embed_dim)
+        self.attn = MultiheadAttention(embed_dim, num_heads)
+        self.layer_norm_2 = LayerNorm(embed_dim)
+        self.linear = Sequential(
+            Linear(embed_dim, hidden_dim),
+            GELU(),
+            Dropout(dropout),
+            Linear(hidden_dim, embed_dim),
+            Dropout(dropout)
+        )
+
+
+    def forward(self, x):
+        inp_x = self.layer_norm_1(x)
+        x = x + self.attn(inp_x, inp_x, inp_x)[0]
+        x = x + self.linear(self.layer_norm_2(x))
+        return x
+
 
