@@ -3,7 +3,6 @@ import numpy as np
 from numpy.lib.type_check import imag
 from torch.nn.modules import loss
 
-from Engine import train
 np.random.seed(42)
 
 # import the necessary packages
@@ -44,7 +43,7 @@ testDataLoader = DataLoader(testData, batch_size=1)
 
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Airplane/Ours_3230TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Bench/Ours_1640TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Bottle/Ours_470TrainData_5BatchSize_60Epochs_0.94SPLIT_0.00005LR.pt'
+# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Bottle/Ours_470TrainData_5BatchSize_200Epochs_0.94SPLIT_0.00005LR.pt'
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Car/Ours_3163TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Cellphone/Ours_750TrainData_5BatchSize_70Epochs_0.94SPLIT_0.00005LR.pt'
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Rifle/Ours_2140TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
@@ -62,6 +61,8 @@ testDataLoader = DataLoader(testData, batch_size=1)
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Pixel2Point/Rifle/Pixel2Point_2140TrainData_5BatchSize_60Epochs_0.94SPLIT_0.00005LR.pt'
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Pixel2Point/Airplane/Pixel2Point_3230TrainData_5BatchSize_60Epochs_0.94SPLIT_0.00005LR.pt'
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Pixel2Point_InitialPC/Bottle/Pixel2Point_470TrainData_5BatchSize_70Epochs_0.94SPLIT_0.00005LR.pt'
+
+# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Attention/Bottle/Ours_470TrainData_5BatchSize_200Epochs_0.94SPLIT_0.00005LR_MaxPool.pt'
 
 
 modelPath = cfg.ROOT_DIR + '/Convolution_AE.pt'
@@ -117,7 +118,7 @@ with torch.no_grad():
 
     # Displaying the train data (X: RGB images) and prediction (Y: Pointclouds) together
     for i, pred in enumerate(preds):
-        path = cfg.ROOT_DIR + '/Output/GeneratedData/Test/02876657'
+        path = cfg.ROOT_DIR + '/Output/GeneratedData/Test/04090263'
         path += f'/{i}/{i}.jpg'
         image = Tool3D.loadImage(path)
         print(path)
@@ -125,7 +126,7 @@ with torch.no_grad():
         pred = pred.view(cfg.SAMPLE_SIZE, 3).detach().cpu().numpy()
         pred = Tool3D.XYZ2PointCloud(pred)
         # pred = Tool3D.pcl2Voxel(pred, 0.02)
-        o3d.visualization.draw_geometries([pred],
+        o3d.visualization.draw_geometries([image, pred],
                                         zoom=0.9, 
                                         front=[0.5, 0.4, -0.6],
                                         lookat=[0, 0, 0], 
