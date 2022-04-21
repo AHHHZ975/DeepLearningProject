@@ -118,7 +118,7 @@ with torch.no_grad():
 
     # Displaying the train data (X: RGB images) and prediction (Y: Pointclouds) together
     for i, pred in enumerate(preds):
-        path = cfg.ROOT_DIR + '/Output/GeneratedData/Test/04090263'
+        path = cfg.ROOT_DIR + '/Output/GeneratedData/Test/02876657'
         path += f'/{i}/{i}.jpg'
         image = Tool3D.loadImage(path)
         print(path)

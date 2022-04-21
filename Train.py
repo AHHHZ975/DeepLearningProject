@@ -28,8 +28,8 @@ from neuralnet_pytorch.metrics import chamfer_loss
 from Utils import Utils
 
 def trainInitialization():
-    numberOfTrainData = 2140
-    numberOfTestData = 230
+    numberOfTrainData = 470 # Rifle: 2140
+    numberOfTestData =  25  # Rifle: 230
     
     global device
     global trainDataLoader, valDataLoader, testDataLoader
@@ -783,21 +783,38 @@ def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_cla
     Utils.save_loss_plot(H)
 
 
+class CosineWarmupScheduler(torch.optim.lr_scheduler._LRScheduler):
+
+    def __init__(self, optimizer, warmup, max_iters):
+        self.warmup = warmup
+        self.max_num_iters = max_iters
+        super().__init__(optimizer)
+
+    def get_lr(self):
+        lr_factor = self.get_lr_factor(epoch=self.last_epoch)
+        return [base_lr * lr_factor for base_lr in self.base_lrs]
+
+    def get_lr_factor(self, epoch):
+        lr_factor = 0.5 * (1 + np.cos(np.pi * epoch / self.max_num_iters))
+        if epoch <= self.warmup:
+            lr_factor *= epoch * 1.0 / self.warmup
+        return lr_factor
 
 
 if __name__ == '__main__':
     
     # Train the model
-    torch.cuda.empty_cache()
+    # torch.cuda.empty_cache()
     trainInitialization()
-    trainViT(embed_dim=256,
-             hidden_dim=512,
+    trainViT(embed_dim=64,
+             hidden_dim=128,
              num_heads=8,
              num_layers=6,
              patch_size=64,
              num_channels=3,
              num_patches=16,
              num_classes=cfg.SAMPLE_SIZE*3)
+
 
 
     # path = cfg.ROOT_DIR + '/Output/GeneratedData/Test/04090263'
@@ -807,8 +824,8 @@ if __name__ == '__main__':
     # image = torch.unsqueeze(image, dim=0)
     # image = image.permute(0, 3, 1, 2)
 
-    # imagePatches = Utils.imageToPatches(image, patchSize=64)
+    # imagePatches = Utils.imageToPatches(image, patchSize=128)
 
     # print(imagePatches.shape)
 
-    # Utils.showPatchedImage(imagePatches, 4)
+    # Utils.showPatchedImage(imagePatches, 2)

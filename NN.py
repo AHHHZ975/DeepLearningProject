@@ -1,3 +1,4 @@
+from sympy import Transpose
 from torch.nn import Sequential
 from torch.nn import Module         # Rather than using the Sequential PyTorch class to implement LeNet, we’ll instead subclass the Module object so you can see how PyTorch implements neural networks using classes
 from torch.nn import Conv2d         # PyTorch’s implementation of convolutional layers
@@ -858,44 +859,72 @@ class VisionTransformer(Module):
         super().__init__()
 
         self.patch_size = patch_size
+        self.embed_dim = embed_dim
+        self.num_patches = num_patches
 
         # Layers/Networks
         self.input_layer = Linear(num_channels*(patch_size**2), embed_dim)
         self.transformer = Sequential(*[PreLayerNormAttention(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers)])
-        self.reconstructor_head = Sequential(
-            LayerNorm(embed_dim),
-			Linear(embed_dim, embed_dim*2),
-			Linear(embed_dim*2, embed_dim*4),
-			Linear(embed_dim*4, embed_dim*8),
-			Linear(embed_dim*8, 2700),
-            Linear(2700, num_points)
-        )
+        self.layerNorm = LayerNorm(embed_dim)		
+        
+		# Reconstruction head (FC)
+        self.fc1 = Linear(num_patches*embed_dim, num_patches*embed_dim*2)
+        self.fc2 = Linear(num_patches*embed_dim*2, 2300)
+        self.fc3 = Linear(2300, 2700)
+        self.fc4 = Linear(2700, num_points)
+
+		# Reconstruction head (Deconv)
+        self.deconv1 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1) # 8 * 5 * 5
+        self.deconv2 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1) # 8 * 5 * 5
+        self.deconv3 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1) # 4 * 15 * 15
+        self.deconv4 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1) # 4 * 15 * 15			
+        self.linear1 = Linear(16*12*12, 2700)
+        self.linear2 = Linear(2700, cfg.SAMPLE_SIZE*3)
+
+		
         self.dropout = Dropout(dropout)
 
         # Parameters/Embeddings
-        self.cls_token = torch.nn.Parameter(torch.randn(1,1,embed_dim))
-        self.pos_embedding = torch.nn.Parameter(torch.randn(1,1+num_patches,embed_dim))
+        self.pos_embedding = torch.nn.Parameter(torch.randn(1,num_patches,embed_dim))
 
     def forward(self, x):
-		# Preprocess input
+		# Preprocess input -> Convert the input image to patches
         x = imageToPatches(x, self.patch_size, True)        
-        B, T, _ = x.shape
+        B, T, _ = x.shape 
+
+		# Linear projection of flattened patches       
         x = self.input_layer(x)
 		
-        # Add CLS token and positional encoding
-        cls_token = self.cls_token.repeat(B, 1, 1)
-        x = torch.cat([cls_token, x], dim=1)
-        x = x + self.pos_embedding[:,:T+1]
+        # Add positional encoding
+        x = x + self.pos_embedding
 
         # Apply Transforrmer
-        x = self.dropout(x)        
-        x = x.transpose(0, 1)
+        x = self.dropout(x)  
+        x = x.transpose(0, 1) # Shape: (patch_size, batch_size, embed_dim)
         x = self.transformer(x)
         
 
-        # Perform classification prediction
-        cls = x[0]
-        out = self.reconstructor_head(cls)
-        
+        # Reconstruction head (FC)
+        out = self.layerNorm(x)
+        out = out.transpose(0,1)
+        out = out.reshape(-1, self.num_patches*self.embed_dim)
+
+        out = torch.relu(self.fc1(out))
+        out = torch.relu(self.fc2(out))
+        out = torch.relu(self.fc3(out))
+        out = torch.tanh(self.fc4(out))
+
+
+		# Reconstruction head (Deconv)
+        # out = self.layerNorm(x)
+        # out = out.transpose(0,1)
+        # out = out.reshape(-1, self.num_patches, int(np.sqrt(self.embed_dim)), int(np.sqrt(self.embed_dim)))
+        # out = torch.relu(self.deconv1(out))
+        # out = torch.relu(self.deconv2(out))
+        # out = torch.relu(self.deconv3(out))
+        # out = torch.relu(self.deconv4(out))
+        # out = out.reshape(-1, 16*12*12)
+        # out = torch.relu(self.linear1(out))
+        # out = torch.tanh(self.linear2(out))
 
         return out
