@@ -865,13 +865,12 @@ class VisionTransformer(Module):
         # Layers/Networks
         self.input_layer = Linear(num_channels*(patch_size**2), embed_dim)
         self.transformer = Sequential(*[PreLayerNormAttention(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers)])
-        self.layerNorm = LayerNorm(embed_dim)		
+        self.layerNorm = LayerNorm(embed_dim)
         
 		# Reconstruction head (FC)
         self.fc1 = Linear(num_patches*embed_dim, num_patches*embed_dim*2)
-        self.fc2 = Linear(num_patches*embed_dim*2, 2300)
-        self.fc3 = Linear(2300, 2700)
-        self.fc4 = Linear(2700, num_points)
+        self.fc2 = Linear(num_patches*embed_dim*2, 2700)
+        self.fc3 = Linear(2700, num_points)
 
 		# Reconstruction head (Deconv)
         self.deconv1 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1) # 8 * 5 * 5
@@ -911,8 +910,7 @@ class VisionTransformer(Module):
 
         out = torch.relu(self.fc1(out))
         out = torch.relu(self.fc2(out))
-        out = torch.relu(self.fc3(out))
-        out = torch.tanh(self.fc4(out))
+        out = torch.tanh(self.fc3(out))
 
 
 		# Reconstruction head (Deconv)

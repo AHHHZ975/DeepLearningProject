@@ -10,7 +10,7 @@ from NN import CVAE                                  # My PyTorch implementation
 from torch.autograd import Variable
 from torch.utils.data import random_split           # Constructs a random training/testing split from an input set of data
 from torch.utils.data import DataLoader             # PyTorch’s awesome data loading utility that allows us to effortlessly build data pipelines to train our CNN
-from torch.optim import Adam                        # The optimizer we’ll use to train our neural network
+from torch.optim import Adam, AdamW                       # The optimizer we’ll use to train our neural network
 from torch.optim import SGD                         # The optimizer we’ll use to train our neural network
 from torch import nn, utils                         # PyTorch’s neural network implementations
 # matplotlib.use("TkAgg")
@@ -28,8 +28,8 @@ from neuralnet_pytorch.metrics import chamfer_loss
 from Utils import Utils
 
 def trainInitialization():
-    numberOfTrainData = 470 # Rifle: 2140
-    numberOfTestData =  25  # Rifle: 230
+    numberOfTrainData = 470 # Bottle: 470   # Rifle: 2140
+    numberOfTestData =  25  # Bottle: 25    # Rifle: 230
     
     global device
     global trainDataLoader, valDataLoader, testDataLoader
@@ -365,7 +365,6 @@ def trainCAE():
     # Plot the training loss and accuracy
     Utils.save_loss_plot(H)
 
-
 def trainCVAE():
     # Initialize the model
     print("[INFO] initializing the CVAE model...")
@@ -644,6 +643,7 @@ def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_cla
     # Initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=cfg.INIT_LR, weight_decay=1e-5)
 
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[40,70], gamma=0.5)
     # Initialize a dictionary to store training and validation history
     H = {
         "train_loss": [],
@@ -748,6 +748,9 @@ def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_cla
 
 
 
+        ############################################## Learning Rate Scheduler ####################################################################
+        lr_scheduler.step()
+
         ################################################## Statistics ####################################################################
 
         # Calculate the average training and validation loss
@@ -765,6 +768,7 @@ def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_cla
         print(f"Train loss: {avgTrainLoss:.6f}")
         print(f"Val loss: {avgValLoss:.6f}")
         print(f"Test loss: {avgTestLoss:.6f}\n")
+
 
 
 
@@ -806,8 +810,8 @@ if __name__ == '__main__':
     # Train the model
     # torch.cuda.empty_cache()
     trainInitialization()
-    trainViT(embed_dim=64,
-             hidden_dim=128,
+    trainViT(embed_dim=256,
+             hidden_dim=512,
              num_heads=8,
              num_layers=6,
              patch_size=64,
