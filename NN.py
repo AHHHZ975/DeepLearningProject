@@ -490,7 +490,7 @@ class PSGN(Module):
 		x = F.relu(torch.add(x, x3))
 		x = self.c11(x)
 		x = x.reshape(-1, 31*31, 3)
-		x = torch.concat([x_additional, x], dim=1)
+		x = torch.cat([x_additional, x], dim=1)
 		# print(x.shape)
 
 		return x
@@ -926,3 +926,203 @@ class VisionTransformer(Module):
         # out = torch.tanh(self.linear2(out))
 
         return out
+
+
+class ConViT(Module):
+
+    def __init__(self, embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_points, patch_size, num_patches, dropout=0.0):
+        """
+        Inputs:
+            embed_dim - Dimensionality of the input feature vectors to the Transformer
+            hidden_dim - Dimensionality of the hidden layer in the feed-forward networks
+                         within the Transformer
+            num_channels - Number of channels of the input (3 for RGB)
+            num_heads - Number of heads to use in the Multi-Head Attention block
+            num_layers - Number of layers to use in the Transformer
+            num_points - Number of points in the output point cloud
+            patch_size - Number of pixels that the patches have per dimension
+            num_patches - Maximum number of patches an image can have
+            dropout - Amount of dropout to apply in the feed-forward network and
+                      on the input encoding
+        """
+        super().__init__()
+
+        self.patch_size = patch_size
+        self.embed_dim = embed_dim
+        self.num_patches = num_patches
+
+        # Layers/Networks
+        self.conv1 = Conv2d(in_channels=48, out_channels=32, kernel_size=3, stride=1, padding=1) 
+        self.conv2 = Conv2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1)
+        self.maxpool = MaxPool2d(2, stride=2)
+
+        self.input_layer = Linear((patch_size**2), embed_dim)
+        self.transformer = Sequential(*[PreLayerNormAttention(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers)])
+        self.layerNorm = LayerNorm(embed_dim)
+        
+		# Reconstruction head (FC)
+        self.fc1 = Linear(num_patches*embed_dim, num_patches*embed_dim*2)
+        self.fc2 = Linear(num_patches*embed_dim*2, 2700)
+        self.fc3 = Linear(2700, num_points)
+
+		# Reconstruction head (Deconv)
+        self.deconv1 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1) # 8 * 5 * 5
+        self.deconv2 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1) # 8 * 5 * 5
+        self.deconv3 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1) # 4 * 15 * 15
+        self.deconv4 = ConvTranspose2d(in_channels=16, out_channels=16, kernel_size=3, stride=1, padding=1) # 4 * 15 * 15			
+        self.linear1 = Linear(16*12*12, 2700)
+        self.linear2 = Linear(2700, cfg.SAMPLE_SIZE*3)
+
+		
+        self.dropout = Dropout(dropout)
+
+        # Parameters/Embeddings
+        self.pos_embedding = torch.nn.Parameter(torch.randn(1,num_patches,embed_dim))
+
+    def forward(self, x):
+		# Preprocess input -> Convert the input image to patches
+        x = imageToPatches(x, self.patch_size, False)
+        x = x.reshape(-1, self.num_patches*3, self.patch_size, self.patch_size)
+
+		# Apply convolution operation on image patches
+        x = self.conv1(x)
+        # x = self.maxpool(x)
+        x = self.conv2(x)
+        # x = self.maxpool(x)
+        x = x.reshape(-1, self.num_patches, self.patch_size**2)
+
+        B, T, _ = x.shape
+
+		# Linear projection of flattened patches       
+        x = self.input_layer(x)
+		
+        # Add positional encoding
+        # x = x + self.pos_embedding
+
+        # Apply Transforrmer
+        x = self.dropout(x)  
+        x = x.transpose(0, 1) # Shape: (patch_size, batch_size, embed_dim)
+        x = self.transformer(x)
+        
+
+        # Reconstruction head (FC)
+        out = self.layerNorm(x)
+        out = out.transpose(0,1)
+        out = out.reshape(-1, self.num_patches*self.embed_dim)
+
+        out = torch.relu(self.fc1(out))
+        out = torch.relu(self.fc2(out))
+        out = torch.tanh(self.fc3(out))
+
+
+		# Reconstruction head (Deconv)
+        # out = self.layerNorm(x)
+        # out = out.transpose(0,1)
+        # out = out.reshape(-1, self.num_patches, int(np.sqrt(self.embed_dim)), int(np.sqrt(self.embed_dim)))
+        # out = torch.relu(self.deconv1(out))
+        # out = torch.relu(self.deconv2(out))
+        # out = torch.relu(self.deconv3(out))
+        # out = torch.relu(self.deconv4(out))
+        # out = out.reshape(-1, 16*12*12)
+        # out = torch.relu(self.linear1(out))
+        # out = torch.tanh(self.linear2(out))
+
+        return out
+
+
+class Converntional_Skip_Connection(Module):
+	"""
+	For padding p, filter size 𝑓∗𝑓 and input image size 𝑛 ∗ 𝑛 and stride ‘𝑠’ 
+	our output image dimension will be [ {(𝑛 + 2𝑝 − 𝑓 + 1) / 𝑠} + 1] ∗ [ {(𝑛 + 2𝑝 − 𝑓 + 1) / 𝑠} + 1].
+	"""
+	def __init__(self):
+		super(Converntional_Skip_Connection, self).__init__()
+		self.channel = 128
+		self.conv2d_x4 = Sequential(Conv2d(in_channels=128, out_channels=256, kernel_size=1))
+
+		self.channel = 64
+		self.conv2d_x3 = Sequential(Conv2d(in_channels=64, out_channels=128, kernel_size=1))
+
+		self.channel = 32
+		self.conv2d_x2 = Sequential(Conv2d(in_channels=32, out_channels=64, kernel_size=1))
+
+		self.channel = 16
+		self.conv2d_x1 = Sequential(Conv2d(in_channels=16, out_channels=32, kernel_size=1))
+		
+		self.conv_in_x6 = Sequential(Conv2d(in_channels=512, out_channels=128, kernel_size=1))
+		self.conv_in_x7 = Sequential(Conv2d(in_channels=256, out_channels=64, kernel_size=1))
+		self.conv_in_x8 = Sequential(Conv2d(in_channels=128, out_channels=32, kernel_size=1))
+		self.conv_in_x9 = Sequential(Conv2d(in_channels=64, out_channels=16, kernel_size=1))
+		
+		self.conv1 = Sequential(Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1), # 8 * 4 * 4
+		 ReLU(),
+		 MaxPool2d(2, stride=2), # 8 * 2 * 2
+		)
+		self.conv2 = Sequential( Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+		 ReLU(),
+		 MaxPool2d(2, stride=2), # 8 * 2 * 2
+		)
+		
+		
+		self.conv3 = Sequential( Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+		ReLU(),
+		 MaxPool2d(2, stride=2), # 8 * 2 * 2
+		)
+		self.conv4 = Sequential(Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+		 ReLU(),
+		 MaxPool2d(2, stride=2), # 4 * 1 * 1
+		)
+
+		self.conv5 = Sequential(
+				Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+				ReLU(),
+				MaxPool2d(2, stride=2), # 256 * 8 * 8
+		)
+
+		self.deconv1 = Sequential(ConvTranspose2d(in_channels=512, out_channels=128, kernel_size=3, stride=1),)  # 8 * 5 * 5
+		self.deconv2 = Sequential(ConvTranspose2d(in_channels=256, out_channels=64, kernel_size=3, stride=1),) # 8 * 5 * 5
+		self.deconv3 = Sequential(ConvTranspose2d(in_channels=128, out_channels=32, kernel_size=3, stride=1, padding=1),) # 4 * 15 * 15
+		self.deconv4 = Sequential(ConvTranspose2d(in_channels=64, out_channels=16, kernel_size=3, stride=1, padding=1),) # 4 * 15 * 15
+		
+		self.linear1 = Sequential(Linear(16*12*12, 2700))
+		self.linear2 = Sequential(Linear(2700, cfg.SAMPLE_SIZE*3),)
+
+		
+		
+
+
+	def forward(self, x):
+		x1 = self.conv1(x)
+		x2 = self.conv2(x1)
+		x3 = self.conv3(x2)
+		x4 = self.conv4(x3)
+		x5 = self.conv5(x4)
+		self.channel= 128
+		x4_conv = self.conv2d_x4(x4)
+		# print('x5',x5.shape)
+		# print('x4',x4_conv.shape)
+		cat_1 = torch.cat((x5.permute(1,0,2,3),x4_conv[:,:,4:12,4:12].permute(1,0,2,3)),0).permute(1,0,2,3) #eq=512
+		x6 = self.deconv1(cat_1)
+		
+		# x6 = self.conv_in_x6(cat_1) #eq=128
+			
+		# print('x6.shape',x6.shape)
+		x3_conv = self.conv2d_x3(x3) #64 ->128
+		
+		# print(x3_conv.shape,'x3_conv')
+		# print('cat_x7',torch.cat((x6.permute(1,0,2,3),x3_conv[:,:,3:13,3:13].permute(1,0,2,3)),0).permute(1,0,2,3).shape)
+		x7 = self.deconv2(torch.cat((x6.permute(1,0,2,3),x3_conv[:,:,3:13,3:13].permute(1,0,2,3)),0).permute(1,0,2,3))
+
+		# print(x7.shape,'x7.shape')
+		x2_conv = self.conv2d_x2(x2) #32 -> 64
+		x8 = self.deconv3(torch.cat((x7.permute(1,0,2,3),x2_conv[:,:,26:38,26:38].permute(1,0,2,3)),0).permute(1,0,2,3))
+		# print(x8.shape,'x8.shape')
+		x1_conv = self.conv2d_x1(x1)
+		x9 = self.deconv4(torch.cat((x8.permute(1,0,2,3),x1_conv[:,:,58:70,58:70].permute(1,0,2,3)),0).permute(1,0,2,3))
+		# print('x9.shape',x9.shape)
+		x10 = self.linear1(torch.flatten(x9, 1))
+		# print('x10.shape',x10.shape)
+		x11 = self.linear2(x10)
+		# print('x11.shape',x11.shape)
+		x12 = torch.tanh(x11)
+		return x12

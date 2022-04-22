@@ -5,7 +5,7 @@ from torch.nn.modules import loss                                   # import mat
 
 
 # import the necessary packages
-from NN import AE, CAE_AHZ, PSGN, CAE_AHZ_Attention, CAE_new, PSGN_Vanilla, Pixel2Point, Pixel2Point_InitialPC, PureAttention, VisionTransformer                                   # My PyTorch implementation of the simple autoencoder
+from NN import AE, CAE_AHZ, PSGN, CAE_AHZ_Attention, CAE_new, PSGN_Vanilla, Pixel2Point, Pixel2Point_InitialPC, PureAttention, VisionTransformer, ConViT, Converntional_Skip_Connection                                 # My PyTorch implementation of the simple autoencoder
 from NN import CVAE                                  # My PyTorch implementation of the convolutional autoencoder
 from torch.autograd import Variable
 from torch.utils.data import random_split           # Constructs a random training/testing split from an input set of data
@@ -28,8 +28,8 @@ from neuralnet_pytorch.metrics import chamfer_loss
 from Utils import Utils
 
 def trainInitialization():
-    numberOfTrainData = 470 # Bottle: 470   # Rifle: 2140
-    numberOfTestData =  25  # Bottle: 25    # Rifle: 230
+    numberOfTrainData = 2140 # Bottle: 470   # Rifle: 2140
+    numberOfTestData =  230  # Bottle: 25    # Rifle: 230
     
     global device
     global trainDataLoader, valDataLoader, testDataLoader
@@ -222,7 +222,7 @@ def trainAE():
 def trainCAE():
     # Initialize the model
     print("[INFO] initializing the CAE model...")
-    model = PureAttention().to(device=device)
+    model = Converntional_Skip_Connection().to(device=device)
 
     # Initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=cfg.INIT_LR, weight_decay=1e-5)
@@ -638,12 +638,15 @@ def trainCAE_AutoEnd():
 def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_classes, patch_size, num_patches):
     # Initialize the model
     print("[INFO] initializing the ViT model...")
-    model = VisionTransformer(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_classes, patch_size, num_patches).to(device=device)
+    model = VisionTransformer(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_classes, patch_size, num_patches, dropout=0.0).to(device=device)
 
     # Initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=cfg.INIT_LR, weight_decay=1e-5)
 
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[40,70], gamma=0.5)
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[40,70], gamma=0.5)
+    # lr_scheduler = CosineWarmupScheduler(optimizer=opt, warmup=20, max_iters=cfg.EPOCHS)
+    
+    
     # Initialize a dictionary to store training and validation history
     H = {
         "train_loss": [],
@@ -749,7 +752,7 @@ def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_cla
 
 
         ############################################## Learning Rate Scheduler ####################################################################
-        lr_scheduler.step()
+        # lr_scheduler.step()
 
         ################################################## Statistics ####################################################################
 
@@ -810,14 +813,15 @@ if __name__ == '__main__':
     # Train the model
     # torch.cuda.empty_cache()
     trainInitialization()
-    trainViT(embed_dim=256,
-             hidden_dim=512,
-             num_heads=8,
-             num_layers=6,
-             patch_size=64,
-             num_channels=3,
-             num_patches=16,
-             num_classes=cfg.SAMPLE_SIZE*3)
+    trainCAE()
+    # trainViT(embed_dim=256,
+    #          hidden_dim=512,
+    #          num_heads=8,
+    #          num_layers=6,
+    #          patch_size=64,
+    #          num_channels=3,
+    #          num_patches=16,
+    #          num_classes=cfg.SAMPLE_SIZE*3)
 
 
 
