@@ -1,5 +1,5 @@
 # Directories
-ROOT_DIR = '/home/ahz/Desktop/3D-Reconstruction/3D-Reconstruction'
+ROOT_DIR = 'C:/Users/AmirHossein/OneDrive/Desktop/DeepLearningProject/DeepLearningProject'
 DATA_DIR = ROOT_DIR + '/Data'
 SHAPENET_DIR = DATA_DIR + '/ShapeNet'
 
@@ -17,7 +17,7 @@ SAMPLE_SIZE = 1024
 # Define training hyperparameters
 INIT_LR = 0.00005
 BATCH_SIZE = 5
-EPOCHS = 95
+EPOCHS = 60
 
 # Define the train and val splits
 TRAIN_SPLIT = 0.94

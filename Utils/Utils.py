@@ -1,5 +1,6 @@
 import glob
 import matplotlib.pyplot as plt
+import torchvision
 
 def getOBJsInDirectory(path):
     """
@@ -46,3 +47,36 @@ def save_loss_plot(H):
     plt.legend(loc="upper right")
     plt.savefig('TrainResult.jpg')
     # plt.show()  
+
+
+def imageToPatches(image, patchSize, isFlattenChannels=False):
+    """
+    Inputs:
+        x - torch.Tensor representing the image of shape [B, C, H, W]
+        patch_size - Number of pixels per dimension of the patches (integer)
+        flatten_channels - If True, the patches will be returned in a flattened format
+                           as a feature vector instead of a image grid.
+    """
+    B, C, H, W = image.shape
+    image = image.reshape(B, C, H//patchSize, patchSize, W//patchSize, patchSize)
+    image = image.permute(0, 2, 4, 1, 3, 5) # [B, H', W', C, p_H, p_W]
+    image = image.flatten(1, 2)              # [B, H'*W', C, p_H, p_W]
+    if isFlattenChannels:
+        image = image.flatten(2,4)          # [B, H'*W', C*p_H*p_W]
+    return image
+
+
+def showPatchedImage(img_patches, nrow=256):    
+
+    fig, ax = plt.subplots(img_patches.shape[0], 1, figsize=(14,3))    
+    fig.suptitle("Images as input sequences of patches")
+
+    for i in range(img_patches.shape[0]):
+        img_grid = torchvision.utils.make_grid(img_patches[0].float(), nrow=nrow, normalize=True, pad_value=0.9)        
+        img_grid = img_grid.permute(1, 2, 0)        
+        ax.imshow(img_grid)
+        ax.axis('off')
+
+    fig.savefig('PatchedImages.png', bbox_inches='tight')
+
+
