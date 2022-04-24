@@ -7,7 +7,7 @@ from torch.nn import Linear         # Fully connected layers
 from torch.nn import LayerNorm
 from torch.nn import Dropout
 from torch.nn import MaxPool2d      # Applies 2D max-pooling to reduce the spatial dimensions of the input volume
-from torch.nn import ReLU           # ReLU activation function
+from torch.nn import ReLU, LeakyReLU, Sigmoid           # ReLU activation function
 from torch.nn import GELU
 from torch.nn import Tanh
 import sys
@@ -1083,3 +1083,232 @@ class ViT_CNN(Module):
 		out = torch.cat((transformerOutput, convOutput), 1)
 
 		return out
+
+
+class DL_course_leakyrel_sig(Module):
+	def __init__(self):
+		super(DL_course_leakyrel_sig, self).__init__()
+		
+		self.encoder = Sequential(
+			Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1), # 8 * 4 * 4
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 4 * 1 * 1
+			Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 256 * 8 * 8
+		)
+		
+		self.decoder = Sequential(
+			ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=1), # 8 * 5 * 5
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=1), # 8 * 5 * 5
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			LeakyReLU(),
+			Flatten(),
+			Linear(16*12*12, 2700),
+			Linear(2700, cfg.SAMPLE_SIZE*3),
+			Sigmoid()
+		)
+	
+	def forward(self, x):
+		encoded = self.encoder(x)
+		# print(encoded.shape)
+		decoded = self.decoder(encoded)
+		# print(decoded.shape)
+		return decoded
+
+
+class DL_course_leakyrel_tanh(Module):
+	def __init__(self):
+		super(DL_course_leakyrel_tanh, self).__init__()
+		
+		self.encoder = Sequential(
+			Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1), # 8 * 4 * 4
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 4 * 1 * 1
+			Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			MaxPool2d(2, stride=2), # 256 * 8 * 8
+		)
+		
+		self.decoder = Sequential(
+			ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=1), # 8 * 5 * 5
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=1), # 8 * 5 * 5
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			LeakyReLU(),
+			Flatten(),
+			Linear(16*12*12, 2700),
+			Linear(2700, cfg.SAMPLE_SIZE*3),
+			Tanh()
+		)
+	
+	def forward(self, x):
+		encoded = self.encoder(x)
+		# print(encoded.shape)
+		decoded = self.decoder(encoded)
+		# print(decoded.shape)
+		return decoded
+
+
+
+class DL_course_rel_sigmoid(Module):
+	def __init__(self):
+		super(DL_course_rel_sigmoid, self).__init__()
+		
+		self.encoder = Sequential(
+			Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1), # 8 * 4 * 4
+			ReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 4 * 1 * 1
+			Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 256 * 8 * 8
+		)
+		
+		self.decoder = Sequential(
+			ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=1), # 8 * 5 * 5
+			ReLU(),
+			ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=1), # 8 * 5 * 5
+			ReLU(),
+			ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			ReLU(),
+			ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			ReLU(),
+			Flatten(),
+			Linear(16*12*12, 2700),
+			Linear(2700, cfg.SAMPLE_SIZE*3),
+			Sigmoid()
+		)
+	
+	def forward(self, x):
+		encoded = self.encoder(x)
+		# print(encoded.shape)
+		decoded = self.decoder(encoded)
+		# print(decoded.shape)
+		return decoded
+
+
+
+
+
+class DL_course_leakyrel_tanh_stride(Module):
+	def __init__(self):
+		super(DL_course_leakyrel_tanh_stride, self).__init__()
+		
+		self.encoder = Sequential(
+			Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=2, padding=1), # 8 * 4 * 4
+			LeakyReLU(),
+			
+			Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=2, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			
+			Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			
+			Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=2, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			
+			Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=2, padding=1), # 4 * 2 * 2
+			LeakyReLU(),
+			
+		)
+		
+		self.decoder = Sequential(
+			ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=1), # 8 * 5 * 5
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=1), # 8 * 5 * 5
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			LeakyReLU(),
+			ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			LeakyReLU(),
+			Flatten(),
+			Linear(16*12*12, 2700),
+			Linear(2700, cfg.SAMPLE_SIZE*3),
+			Tanh()
+		)
+	
+	def forward(self, x):
+		encoded = self.encoder(x)
+		# print(encoded.shape)
+		decoded = self.decoder(encoded)
+		# print(decoded.shape)
+		return decoded
+
+
+class DL_course_rel_tanh(Module):
+	def __init__(self):
+		super(DL_course_rel_tanh, self).__init__()
+		
+		self.encoder = Sequential(
+			Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1), # 8 * 4 * 4
+			ReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 8 * 2 * 2
+			Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 4 * 1 * 1
+			Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1), # 4 * 2 * 2
+			ReLU(),
+			MaxPool2d(2, stride=2), # 256 * 8 * 8
+		)
+		
+		self.decoder = Sequential(
+			ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=1), # 8 * 5 * 5
+			ReLU(),
+			ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=1), # 8 * 5 * 5
+			ReLU(),
+			ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			ReLU(),
+			ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
+			ReLU(),
+			Flatten(),
+			Linear(16*12*12, 2700),
+			Linear(2700, cfg.SAMPLE_SIZE*3),
+			Tanh()
+		)
+	
+	def forward(self, x):
+		encoded = self.encoder(x)
+		# print(encoded.shape)
+		decoded = self.decoder(encoded)
+		# print(decoded.shape)
+		return decoded
