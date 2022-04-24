@@ -1023,8 +1023,8 @@ class ViT_CNN(Module):
 			ConvTranspose2d(in_channels=32, out_channels=16, kernel_size=3, stride=1, padding=1), # 4 * 15 * 15
 			ReLU(),
 			Flatten(),
-			Linear(16*12*12, 1024),
-			Linear(1024, 768*3),
+			Linear(16*12*12, 768*3),
+			Linear(768*3, 768*3),
 			Tanh()
 		)
 
@@ -1040,9 +1040,9 @@ class ViT_CNN(Module):
 		self.layerNorm = LayerNorm(embed_dim)
 		
 		# Reconstruction head (FC)
-		self.fc1 = Linear(num_patches*embed_dim, num_patches*embed_dim*2)
-		self.fc2 = Linear(num_patches*embed_dim*2, 2700)
-		self.fc3 = Linear(2700, 256*3)
+		self.fc1 = Linear(num_patches*embed_dim, int(num_patches*embed_dim/2))
+		self.fc2 = Linear(int(num_patches*embed_dim/2), 1024)
+		self.fc3 = Linear(1024, 256*3)
 
 		
 
@@ -1051,6 +1051,7 @@ class ViT_CNN(Module):
 		###################### CNN stream ###############################
 		convFeatures = self.ConvEncoder(x)
 		convOutput = self.ConvDecoder(convFeatures)
+
 
 		###################### Transformer stream #######################
 		# Preprocess input -> Convert the input image to patches
