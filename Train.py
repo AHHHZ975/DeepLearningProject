@@ -28,8 +28,8 @@ from neuralnet_pytorch.metrics import chamfer_loss
 from Utils import Utils
 
 def trainInitialization():
-    numberOfTrainData = 2140 # Bottle: 470   # Rifle: 2140
-    numberOfTestData =  230  # Bottle: 25    # Rifle: 230
+    numberOfTrainData = 470    # Airplane: 3230  # Cellphone: 750  # Bottle: 470   # Rifle: 2140
+    numberOfTestData =  25     # Airplane: 810   # Cellphone: 80   # Bottle: 25    # Rifle: 230
     
     global device
     global trainDataLoader, valDataLoader, testDataLoader
@@ -771,8 +771,6 @@ def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_cla
         print(f"Train loss: {avgTrainLoss:.6f}")
         print(f"Val loss: {avgValLoss:.6f}")
         print(f"Test loss: {avgTestLoss:.6f}\n")
-
-
 
 
     # finish measuring how long training took
