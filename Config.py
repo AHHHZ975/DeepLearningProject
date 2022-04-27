@@ -17,8 +17,8 @@ SAMPLE_SIZE = 1024
 # Define training hyperparameters
 INIT_LR = 0.00005
 BATCH_SIZE = 5
-EPOCHS = 60
+EPOCHS = 50
 
 # Define the train and val splits
-TRAIN_SPLIT = 0.94
+TRAIN_SPLIT = 0.04
 VAL_SPLIT = 1 - TRAIN_SPLIT

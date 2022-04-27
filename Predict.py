@@ -31,23 +31,6 @@ testData = Dataset.ShapeNetDataset(numberOfTestData, train=False)
 testDataLoader = DataLoader(testData, batch_size=1)
 
 # load the model and set it to evaluation mode
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Airplane/Ours_3230TrainData_5BatchSize_30Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Bench/Ours_1640TrainData_5BatchSize_35Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Bottle/Ours_470TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Car/Ours_3163TrainData_5BatchSize_45Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Cellphone/Ours_750TrainData_5BatchSize_45Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Rifle/Ours_2140TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Sofa/Ours_2860TrainData_5BatchSize_40Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours/Bike/Ours_304TrainData_5BatchSize_200Epochs_0.94SPLIT_0.00005LR.pt'
-
-
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Airplane/Ours_3230TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Bench/Ours_1640TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Bottle/Ours_470TrainData_5BatchSize_200Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Car/Ours_3163TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Cellphone/Ours_750TrainData_5BatchSize_70Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Rifle/Ours_2140TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Ours_New/Sofa/Ours_2860TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR.pt'
 
 
 
@@ -56,13 +39,13 @@ testDataLoader = DataLoader(testData, batch_size=1)
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/PSGN/Car/PSGN_2970TrainData_5BatchSize_100Epochs_0.94SPLIT_0.0001LR.pt'
 # modelPath = cfg.ROOT_DIR + '/PreTrainedModels/PSGN/Rifle/PSGN_2140TrainData_5BatchSize_100Epochs_0.94SPLIT_0.00005LR.pt'
 
+# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/ViT+CNN/Airplane/ViTCNN_3230TrainData_5BatchSize_60Epochs_0.94SPLIT_0.00005LR_8HEAD_LRSCHEDULING.pt'
+# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/ViT+CNN/Bottle/ViTCNN_470TrainData_5BatchSize_200Epochs_0.94SPLIT_0.00005LR_8HEAD_LRSCHEDULING.pt'
+# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/ViT+CNN/Cellphone/ViTCNN_750TrainData_5BatchSize_100Epochs_0.94SPLIT_0.00005LR_8HEAD_LRSCHEDULING.pt'
+# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/ViT+CNN/Rifle/ViTCNN_2140TrainData_5BatchSize_50Epochs_0.94SPLIT_0.00005LR_8HEAD_LRSCHEDULING.pt'
 
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Pixel2Point/Bottle/Pixel2Point_470TrainData_5BatchSize_60Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Pixel2Point/Rifle/Pixel2Point_2140TrainData_5BatchSize_60Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Pixel2Point/Airplane/Pixel2Point_3230TrainData_5BatchSize_60Epochs_0.94SPLIT_0.00005LR.pt'
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Pixel2Point_InitialPC/Bottle/Pixel2Point_470TrainData_5BatchSize_70Epochs_0.94SPLIT_0.00005LR.pt'
 
-# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Attention/Bottle/Ours_470TrainData_5BatchSize_200Epochs_0.94SPLIT_0.00005LR_MaxPool.pt'
+# modelPath = cfg.ROOT_DIR + '/PreTrainedModels/Attention/Bottle/Attn_470TrainData_5BatchSize_125Epochs_0.94SPLIT_0.00005LR_MaxPool.pt'
 
 
 modelPath = cfg.ROOT_DIR + '/Convolution_AE.pt'
@@ -126,7 +109,7 @@ with torch.no_grad():
         pred = pred.view(cfg.SAMPLE_SIZE, 3).detach().cpu().numpy()
         pred = Tool3D.XYZ2PointCloud(pred)
         # pred = Tool3D.pcl2Voxel(pred, 0.02)
-        o3d.visualization.draw_geometries([image, pred],
+        o3d.visualization.draw_geometries([pred],
                                         zoom=0.9, 
                                         front=[0.5, 0.4, -0.6],
                                         lookat=[0, 0, 0], 

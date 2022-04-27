@@ -5,7 +5,7 @@ from torch.nn.modules import loss                                   # import mat
 
 
 # import the necessary packages
-from NN import AE, CAE_AHZ, PSGN, CAE_AHZ_Attention, CAE_new, PSGN_Vanilla, Pixel2Point, Pixel2Point_InitialPC, PureAttention, VisionTransformer, ConViT, Converntional_Skip_Connection                                 # My PyTorch implementation of the simple autoencoder
+from NN import AE, CAE_AHZ, PSGN, CAE_AHZ_Attention, CAE_new, DL_course_leakyrel_sig, DL_course_leakyrel_tanh, DL_course_rel_sigmoid, DL_course_rel_tanh, PSGN_Vanilla, PureAttention, ViT_CNN, VisionTransformer, ConViT, Converntional_Skip_Connection                                 # My PyTorch implementation of the simple autoencoder
 from NN import CVAE                                  # My PyTorch implementation of the convolutional autoencoder
 from torch.autograd import Variable
 from torch.utils.data import random_split           # Constructs a random training/testing split from an input set of data
@@ -28,8 +28,8 @@ from neuralnet_pytorch.metrics import chamfer_loss
 from Utils import Utils
 
 def trainInitialization():
-    numberOfTrainData = 470    # Airplane: 3230  # Cellphone: 750  # Bottle: 470   # Rifle: 2140
-    numberOfTestData =  25     # Airplane: 810   # Cellphone: 80   # Bottle: 25    # Rifle: 230
+    numberOfTrainData = 3230    # Airplane: 3230  # Cellphone: 750  # Bottle: 470   # Rifle: 2140
+    numberOfTestData =  810     # Airplane: 810   # Cellphone: 80   # Bottle: 25    # Rifle: 230
     
     global device
     global trainDataLoader, valDataLoader, testDataLoader
@@ -222,7 +222,7 @@ def trainAE():
 def trainCAE():
     # Initialize the model
     print("[INFO] initializing the CAE model...")
-    model = Converntional_Skip_Connection().to(device=device)
+    model = CAE_AHZ_Attention().to(device=device)
 
     # Initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=cfg.INIT_LR, weight_decay=1e-5)
@@ -638,12 +638,15 @@ def trainCAE_AutoEnd():
 def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_classes, patch_size, num_patches):
     # Initialize the model
     print("[INFO] initializing the ViT model...")
-    model = VisionTransformer(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_classes, patch_size, num_patches, dropout=0.0).to(device=device)
+    model = ViT_CNN(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_classes, patch_size, num_patches, dropout=0.0).to(device=device)
 
     # Initialize our optimizer and loss function
     opt = Adam(model.parameters(), lr=cfg.INIT_LR, weight_decay=1e-5)
 
-    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[40,70], gamma=0.5)
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[80,150], gamma=0.5) # For ViT+CNN -> Bottle
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[40,70], gamma=0.5)  # For ViT+CNN -> Cellphone 
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[20,40], gamma=0.5)  # For ViT+CNN -> Airplane and Rifle
+
     # lr_scheduler = CosineWarmupScheduler(optimizer=opt, warmup=20, max_iters=cfg.EPOCHS)
     
     
@@ -752,7 +755,7 @@ def trainViT(embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_cla
 
 
         ############################################## Learning Rate Scheduler ####################################################################
-        # lr_scheduler.step()
+        lr_scheduler.step()
 
         ################################################## Statistics ####################################################################
 
@@ -811,27 +814,27 @@ if __name__ == '__main__':
     # Train the model
     # torch.cuda.empty_cache()
     trainInitialization()
-    trainCAE()
-    # trainViT(embed_dim=256,
-    #          hidden_dim=512,
-    #          num_heads=8,
-    #          num_layers=6,
-    #          patch_size=64,
-    #          num_channels=3,
-    #          num_patches=16,
-    #          num_classes=cfg.SAMPLE_SIZE*3)
+    # trainCAE()
+    trainViT(embed_dim=256,
+             hidden_dim=512,
+             num_heads=8,
+             num_layers=6,
+             patch_size=64,
+             num_channels=3,
+             num_patches=16,
+             num_classes=cfg.SAMPLE_SIZE*3)
 
 
 
-    # path = cfg.ROOT_DIR + '/Output/GeneratedData/Test/04090263'
-    # path += f'/{0}/{0}.jpg'
+    # path = cfg.ROOT_DIR + '/Output/GeneratedData/Test/02691156'
+    # path += f'/{1}/{1}.jpg'
     # image = Dataset.loadRGB(path)
     # image = torch.from_numpy(image)
     # image = torch.unsqueeze(image, dim=0)
     # image = image.permute(0, 3, 1, 2)
 
-    # imagePatches = Utils.imageToPatches(image, patchSize=128)
+    # imagePatches = Utils.imageToPatches(image, patchSize=64)
 
     # print(imagePatches.shape)
 
-    # Utils.showPatchedImage(imagePatches, 2)
+    # Utils.showPatchedImage(imagePatches, 4)

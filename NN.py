@@ -552,6 +552,8 @@ class CAE_AHZ_Attention(Module):
 		# Conv4
 		x = torch.relu(self.conv4(x))
 		x = self.maxpool(x)
+		
+		# Deconv 1-2
 		x = torch.relu(self.deconv2(x))
 		x = torch.relu(self.deconv3(x))
 		# Linear 1-2
@@ -761,29 +763,18 @@ class VisionTransformer(Module):
         x = self.dropout(x)  
         x = x.transpose(0, 1) # Shape: (patch_size, batch_size, embed_dim)
         x = self.transformer(x)
-        
+                
 
         # Reconstruction head (FC)
         out = self.layerNorm(x)
         out = out.transpose(0,1)
         out = out.reshape(-1, self.num_patches*self.embed_dim)
+        
 
         out = torch.relu(self.fc1(out))
         out = torch.relu(self.fc2(out))
         out = torch.tanh(self.fc3(out))
 
-
-		# Reconstruction head (Deconv)
-        # out = self.layerNorm(x)
-        # out = out.transpose(0,1)
-        # out = out.reshape(-1, self.num_patches, int(np.sqrt(self.embed_dim)), int(np.sqrt(self.embed_dim)))
-        # out = torch.relu(self.deconv1(out))
-        # out = torch.relu(self.deconv2(out))
-        # out = torch.relu(self.deconv3(out))
-        # out = torch.relu(self.deconv4(out))
-        # out = out.reshape(-1, 16*12*12)
-        # out = torch.relu(self.linear1(out))
-        # out = torch.tanh(self.linear2(out))
 
         return out
 
@@ -990,11 +981,9 @@ class Converntional_Skip_Connection(Module):
 class ViT_CNN(Module):
 	def __init__(self, embed_dim, hidden_dim, num_channels, num_heads, num_layers, num_points, patch_size, num_patches, dropout=0.0):
 		super().__init__()
-
 		self.patch_size = patch_size
 		self.embed_dim = embed_dim
 		self.num_patches = num_patches
-
 		self.ConvEncoder = 	Sequential(
 			Conv2d(in_channels=3, out_channels=16, kernel_size=3, stride=1, padding=1), # 8 * 4 * 4
 			ReLU(),
@@ -1012,7 +1001,6 @@ class ViT_CNN(Module):
 			ReLU(),
 			MaxPool2d(2, stride=2),
 		)
-
 		self.ConvDecoder = Sequential(
 			ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=3, stride=1), # 8 * 5 * 5
 			ReLU(),
@@ -1027,61 +1015,45 @@ class ViT_CNN(Module):
 			Linear(768*3, 768*3),
 			Tanh()
 		)
-
-
 		self.dropout = Dropout(dropout)
-
 		# Parameters/Embeddings
 		self.pos_embedding = torch.nn.Parameter(torch.randn(1,num_patches,embed_dim))
-
 		# Layers/Networks
 		self.input_layer = Linear(num_channels*(patch_size**2), embed_dim)
 		self.transformer = Sequential(*[PreLayerNormAttention(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers)])
 		self.layerNorm = LayerNorm(embed_dim)
-		
 		# Reconstruction head (FC)
 		self.fc1 = Linear(num_patches*embed_dim, int(num_patches*embed_dim/2))
 		self.fc2 = Linear(int(num_patches*embed_dim/2), 1024)
 		self.fc3 = Linear(1024, 256*3)
 
 		
-
 	def forward(self, x):
-
 		###################### CNN stream ###############################
 		convFeatures = self.ConvEncoder(x)
 		convOutput = self.ConvDecoder(convFeatures)
-
-
 		###################### Transformer stream #######################
 		# Preprocess input -> Convert the input image to patches
 		x = imageToPatches(x, self.patch_size, True)        
 		B, T, _ = x.shape 
-
 		# Linear projection of flattened patches       
 		x = self.input_layer(x)
-		
 		# Add positional encoding
 		x = x + self.pos_embedding
-
 		# Apply Transforrmer
 		x = self.dropout(x)  
 		x = x.transpose(0, 1) # Shape: (patch_size, batch_size, embed_dim)
 		transformerFeatures = self.transformer(x)
-		
-
 		# Reconstruction head (FC)
 		out = self.layerNorm(x)
 		out = out.transpose(0,1)
 		out = out.reshape(-1, self.num_patches*self.embed_dim)
-
 		out = torch.relu(self.fc1(out))
 		out = torch.relu(self.fc2(out))
 		out = torch.tanh(self.fc3(out))
 		transformerOutput = out
-
+		###################### Merge two streams #######################
 		out = torch.cat((transformerOutput, convOutput), 1)
-
 		return out
 
 
@@ -1175,7 +1147,6 @@ class DL_course_leakyrel_tanh(Module):
 		return decoded
 
 
-
 class DL_course_rel_sigmoid(Module):
 	def __init__(self):
 		super(DL_course_rel_sigmoid, self).__init__()
@@ -1219,8 +1190,6 @@ class DL_course_rel_sigmoid(Module):
 		decoded = self.decoder(encoded)
 		# print(decoded.shape)
 		return decoded
-
-
 
 
 
